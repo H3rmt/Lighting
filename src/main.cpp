@@ -2,7 +2,7 @@
 #include <CapacitiveSensor.h>
 
 // val must be > than avg-value to trigger 1 tap
-#define threshold 400
+#define threshold 300
 
 #define ButtonStairs 5   // ON-BOARD BUTTON INPUT
 #define ButtonRoom 8     // EXTERNAL-BUTTON INPUT
@@ -18,10 +18,20 @@
 #define CapSensor 10  // CAPSENSOR RESISTOR OTHER
 
 // current avg value
-int avgValue = 50;
+float avgValue = 50.0;
 
 // count time remaining in seconds for the lighting to stay on
 float remainingTime = -5;
+
+#define debug
+
+#ifdef debug
+#define print(d) Serial.print(d);
+#define println(d) Serial.println(d);
+#else
+#define print(d)
+#define println(d)
+#endif
 
 CapacitiveSensor sensor = CapacitiveSensor(CapSensor, CapSensorIn);
 
@@ -29,7 +39,7 @@ void startupsequence();
 
 void setup()
 {
-  // Serial.begin(9600);
+  Serial.begin(9600);
 
   pinMode(ButtonStairs, INPUT_PULLUP);
   pinMode(ButtonRoom, INPUT_PULLUP);
@@ -60,7 +70,7 @@ void loop()
   else
     digitalWrite(Room, LOW);
 
-  delay(100);
+  delay(150);
 }
 
 void testRoom()
@@ -77,19 +87,24 @@ void testStairs()
   float ontime = map(analogRead(OnTime), 0, 1023, 0, 30);
 
   // read cap value
-  int val = sensor.capacitiveSensor(30);
+  float val = (float) sensor.capacitiveSensor(30);
   // avgValue = ((avgValue * 15) + val) >> 4;
   // avgValue = ((avgValue * 255) + val) >> 8;
-  avgValue = ((avgValue * 63) + val) >> 6;
-  // Serial.println(val);
-  // Serial.println(avgValue);
-  // Serial.println("");
+  // avgValue = ((avgValue * 31) + val) >> 5;
+  // avgValue = ((avgValue * 127) + val) / 128;
+  avgValue = (avgValue / 500 * 499) + val / 500;
+  print(val);
+  print(", ")
+  print(avgValue);
+  print(", ")
+  print(threshold + avgValue);
 
   // check if value is greater threshold
   // digitalRead(ButtonStairs) == LOW)  triggers lighting directly if ONBOARD BUTTON is pressed
   if ((val > threshold + avgValue) || digitalRead(ButtonStairs) == LOW)
   {
     digitalWrite(Stairs, HIGH);
+    // println("activate--------------");
     remainingTime = ontime;
   }
   else
@@ -106,6 +121,7 @@ void testStairs()
       }
     }
   }
+  println("");
 }
 
 void startupsequence()
